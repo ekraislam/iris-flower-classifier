@@ -112,9 +112,15 @@ document.addEventListener('DOMContentLoaded', () => {
     predictBtn.classList.add('btn-loading');
     predictBtn.disabled = true;
 
+    // Determine API endpoint intelligently
+    let apiEndpoint = '/api/predict';
+    if (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '5000' && !window.location.hostname.includes('vercel.app'))) {
+      apiEndpoint = 'http://127.0.0.1:5000/api/predict';
+    }
+
     try {
-      // Call Vercel Serverless Function endpoint
-      const response = await fetch('/api/predict', {
+      // Call Serverless API endpoint
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -138,7 +144,11 @@ document.addEventListener('DOMContentLoaded', () => {
       displayResult(data.result);
     } catch (err) {
       console.error('API Error:', err);
-      showError('Could not connect to prediction API. Make sure the server is running.');
+      if (window.location.protocol === 'file:') {
+        showError('ব্রাউজারে সরাসরি HTML ফাইল না খুলে টার্মিনালে "py api/index.py" চালু করে http://127.0.0.1:5000 ভিজিট করুন।');
+      } else {
+        showError('Could not connect to prediction API. Make sure backend is running (py api/index.py).');
+      }
     } finally {
       predictBtn.classList.remove('btn-loading');
       predictBtn.disabled = false;
