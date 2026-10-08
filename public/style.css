@@ -745,15 +745,104 @@ body {
 
 /* Footer */
 .app-footer {
-  text-align: center;
-  margin-top: 48px;
-  color: var(--text-dim);
-  font-size: 0.88rem;
+  margin-top: 56px;
+  display: flex;
+  justify-content: center;
 }
 
-.app-footer code {
-  background: rgba(255, 255, 255, 0.08);
-  padding: 2px 6px;
-  border-radius: 4px;
-  color: #e2e8f0;
+.footer-card {
+  background: rgba(18, 24, 38, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-glass);
+  border-radius: 18px;
+  padding: 24px 32px;
+  text-align: center;
+  max-width: 600px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.footer-card:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  transform: translateY(-2px);
+}
+
+.footer-author {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.heart-pulse {
+  display: inline-block;
+  animation: heartBeat 1.8s infinite;
+  transform-origin: center;
+}
+
+@keyframes heartBeat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.25); }
+  30% { transform: scale(1); }
+  45% { transform: scale(1.2); }
+}
+
+.author-link {
+  color: #818cf8;
+  text-decoration: none;
+  font-weight: 700;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.author-link:hover {
+  color: #a5b4fc;
+}
+
+.author-link::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  bottom: -2px;
+  left: 0;
+  background: var(--primary-gradient);
+  border-radius: 2px;
+}
+
+.footer-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.tag-pill {
+  font-size: 0.78rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+}
+
+.footer-meta {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.license-link {
+  color: var(--text-muted);
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.license-link:hover {
+  color: var(--text-main);
 }

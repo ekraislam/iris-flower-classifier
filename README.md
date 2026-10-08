@@ -225,3 +225,17 @@ curl -X POST https://your-project.vercel.app/api/predict \
   }
 }
 ```
+
+---
+
+## 👤 Author
+
+- **Ekramul Islam (Ohi)**
+- GitHub: [@ekraislam](https://github.com/ekraislam)
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE) - see the [LICENSE](LICENSE) file for details.
+Copyright &copy; 2026 Ekramul Islam (Ohi).
