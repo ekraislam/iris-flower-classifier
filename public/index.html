@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Iris Flower Species Classification Web App powered by Machine Learning and deployed on Vercel.">
+  <title>Iris Flower Classifier | Vercel ML App</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Static Stylesheet -->
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  <div class="ambient-glow glow-3"></div>
+
+  <main class="app-container">
+    <!-- Header Section -->
+    <header class="app-header">
+      <div class="badge-pill">
+        <span class="pulse-dot"></span> Serverless ML Inference
+      </div>
+      <h1 class="main-title">Iris Flower <span>Classifier</span></h1>
+      <p class="subtitle">Enter the sepal and petal measurements below to predict whether the flower is an <strong>Iris Setosa</strong>, <strong>Versicolor</strong>, or <strong>Virginica</strong>.</p>
+    </header>
+
+    <!-- Preset Quick Samples -->
+    <section class="sample-presets" aria-label="Sample test presets">
+      <span class="presets-label">Quick Test Presets:</span>
+      <div class="preset-buttons">
+        <button type="button" class="preset-chip" id="preset-setosa" data-sl="5.1" data-sw="3.5" data-pl="1.4" data-pw="0.2">
+          🌸 Setosa Sample
+        </button>
+        <button type="button" class="preset-chip" id="preset-versicolor" data-sl="6.0" data-sw="2.7" data-pl="4.0" data-pw="1.3">
+          🌿 Versicolor Sample
+        </button>
+        <button type="button" class="preset-chip" id="preset-virginica" data-sl="6.9" data-sw="3.1" data-pl="5.4" data-pw="2.1">
+          🌺 Virginica Sample
+        </button>
+      </div>
+    </section>
+
+    <!-- Main Card Grid -->
+    <div class="card-grid">
+      <!-- Input Form Card -->
+      <section class="glass-card form-card">
+        <div class="card-header">
+          <div class="icon-circle">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="card-title">Flower Measurements</h2>
+            <p class="card-desc">Values in centimeters (cm)</p>
+          </div>
+        </div>
+
+        <!-- Input Form -->
+        <form id="prediction-form" novalidate>
+          <div class="inputs-grid">
+            <!-- Sepal Length -->
+            <div class="input-group">
+              <label for="sepal_length">
+                <span>Sepal Length</span>
+                <span class="unit-tag">cm</span>
+              </label>
+              <div class="input-wrapper">
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  min="0.1" 
+                  max="30"
+                  id="sepal_length" 
+                  name="sepal_length" 
+                  placeholder="e.g. 5.1" 
+                  required
+                >
+                <span class="field-icon">📏</span>
+              </div>
+              <small class="hint-text">Typical range: 4.3 - 7.9 cm</small>
+            </div>
+
+            <!-- Sepal Width -->
+            <div class="input-group">
+              <label for="sepal_width">
+                <span>Sepal Width</span>
+                <span class="unit-tag">cm</span>
+              </label>
+              <div class="input-wrapper">
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  min="0.1" 
+                  max="30"
+                  id="sepal_width" 
+                  name="sepal_width" 
+                  placeholder="e.g. 3.5" 
+                  required
+                >
+                <span class="field-icon">📐</span>
+              </div>
+              <small class="hint-text">Typical range: 2.0 - 4.4 cm</small>
+            </div>
+
+            <!-- Petal Length -->
+            <div class="input-group">
+              <label for="petal_length">
+                <span>Petal Length</span>
+                <span class="unit-tag">cm</span>
+              </label>
+              <div class="input-wrapper">
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  min="0.1" 
+                  max="30"
+                  id="petal_length" 
+                  name="petal_length" 
+                  placeholder="e.g. 1.4" 
+                  required
+                >
+                <span class="field-icon">🌱</span>
+              </div>
+              <small class="hint-text">Typical range: 1.0 - 6.9 cm</small>
+            </div>
+
+            <!-- Petal Width -->
+            <div class="input-group">
+              <label for="petal_width">
+                <span>Petal Width</span>
+                <span class="unit-tag">cm</span>
+              </label>
+              <div class="input-wrapper">
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  min="0.1" 
+                  max="30"
+                  id="petal_width" 
+                  name="petal_width" 
+                  placeholder="e.g. 0.2" 
+                  required
+                >
+                <span class="field-icon">🌿</span>
+              </div>
+              <small class="hint-text">Typical range: 0.1 - 2.5 cm</small>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="button-row">
+            <button type="submit" id="predict-btn" class="btn btn-primary">
+              <span class="btn-text">Predict Species</span>
+              <span class="btn-spinner" id="btn-spinner" aria-hidden="true"></span>
+              <svg class="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+            <button type="button" id="reset-btn" class="btn btn-secondary">
+              Clear
+            </button>
+          </div>
+        </form>
+
+        <!-- Error Notification State -->
+        <div id="error-box" class="alert alert-error hidden" role="alert">
+          <span class="alert-icon">⚠️</span>
+          <span id="error-message" class="alert-text"></span>
+        </div>
+      </section>
+
+      <!-- Prediction Result Card -->
+      <section class="glass-card result-card" id="result-container" aria-live="polite">
+        <div class="card-header">
+          <div class="icon-circle icon-circle-result">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="card-title">Prediction Output</h2>
+            <p class="card-desc">Model inference result</p>
+          </div>
+        </div>
+
+        <!-- Placeholder State (Awaiting input) -->
+        <div id="result-placeholder" class="result-placeholder">
+          <div class="placeholder-art">
+            <div class="floating-flower">🌸</div>
+          </div>
+          <h3 class="placeholder-title">Awaiting Measurements</h3>
+          <p class="placeholder-text">Enter the dimensions on the left or select a quick preset, then click <strong>Predict Species</strong> to see the model's classification.</p>
+        </div>
+
+        <!-- Populated Prediction Result -->
+        <div id="result-content" class="result-content hidden">
+          <div class="species-badge-banner" id="result-banner">
+            <div class="species-icon" id="result-icon">🌸</div>
+            <div class="species-titles">
+              <span class="prediction-label">Identified Species</span>
+              <h3 class="species-name" id="result-species">Setosa</h3>
+              <span class="scientific-name" id="result-scientific">Iris setosa</span>
+            </div>
+          </div>
+
+          <div class="result-details">
+            <div class="detail-block">
+              <span class="detail-label">Botanic Profile</span>
+              <p class="species-desc" id="result-desc"></p>
+            </div>
+
+            <!-- Model Confidence -->
+            <div class="confidence-box" id="confidence-box">
+              <div class="confidence-header">
+                <span class="confidence-label">Model Confidence</span>
+                <span class="confidence-value" id="confidence-val">100%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-bar" id="confidence-bar" style="width: 100%;"></div>
+              </div>
+            </div>
+
+            <!-- Probability Breakdown -->
+            <div class="prob-distribution" id="prob-distribution">
+              <span class="detail-label">Probability Distribution</span>
+              <div class="prob-list" id="prob-list">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Species Guide Cards -->
+    <section class="species-guide">
+      <h2 class="guide-title">Iris Species Reference Guide</h2>
+      <div class="guide-grid">
+        <div class="guide-card">
+          <div class="guide-badge setosa">🌸 Iris Setosa</div>
+          <p class="guide-desc">Noticeably shorter, wider petals and high adaptability to cold climates.</p>
+          <div class="guide-metrics">Typical Petal: <strong>1.4 cm</strong> × <strong>0.2 cm</strong></div>
+        </div>
+        <div class="guide-card">
+          <div class="guide-badge versicolor">🌿 Iris Versicolor</div>
+          <p class="guide-desc">The 'Blue Flag' iris. Balanced medium petal length and slender proportions.</p>
+          <div class="guide-metrics">Typical Petal: <strong>4.2 cm</strong> × <strong>1.3 cm</strong></div>
+        </div>
+        <div class="guide-card">
+          <div class="guide-badge virginica">🌺 Iris Virginica</div>
+          <p class="guide-desc">The largest of the three species with elongated, richly pigmented violet petals.</p>
+          <div class="guide-metrics">Typical Petal: <strong>5.5 cm</strong> × <strong>2.0 cm</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Deployed on <strong>Vercel</strong> &bull; Powered by <strong>Python Serverless API</strong> &bull; Loaded from <code>iris_model.pkl</code></p>
+    </footer>
+  </main>
+
+  <!-- Frontend Logic -->
+  <script src="/script.js"></script>
+</body>
+</html>
