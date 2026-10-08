@@ -16,15 +16,19 @@ app = Flask(__name__)
 
 def find_model_path():
     """
-    Locates iris_model.pkl across local development and Vercel serverless runtime environments.
+    Locates iris_model.pkl across local development, AWS Lambda, and Vercel serverless environments.
     """
     candidate_paths = [
-        # 1. Project root directory (standard in Vercel function runtime)
-        os.path.join(os.getcwd(), 'iris_model.pkl'),
-        # 2. Parent directory of this script (/api -> project root)
-        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'iris_model.pkl'),
-        # 3. Same directory as this script (/api)
+        # Inside /api directory
         os.path.join(os.path.dirname(os.path.abspath(__file__)), 'iris_model.pkl'),
+        # Root directory from parent of /api
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'iris_model.pkl'),
+        # Current working directory
+        os.path.join(os.getcwd(), 'iris_model.pkl'),
+        os.path.join(os.getcwd(), 'api', 'iris_model.pkl'),
+        # AWS Lambda standard task root
+        '/var/task/iris_model.pkl',
+        '/var/task/api/iris_model.pkl',
     ]
 
     for path in candidate_paths:
@@ -37,14 +41,16 @@ def find_model_path():
 MODEL_PATH = find_model_path()
 
 # Load the pre-trained model once at module initialization
-# In serverless environments, this remains cached across warm function executions
 model = None
+model_error = None
+
 try:
     if os.path.isfile(MODEL_PATH):
         model = joblib.load(MODEL_PATH)
         print(f"[OK] Successfully loaded model from: {MODEL_PATH}")
     else:
-        print(f"[WARN] Model file not found at: {MODEL_PATH}")
+        model_error = f"Model file not found at: {MODEL_PATH}"
+        print(f"[WARN] {model_error}")
 except Exception as err:
     print(f"[WARN] joblib.load failed ({err}), attempting fallback...")
     try:
@@ -53,7 +59,8 @@ except Exception as err:
             model = pickle.load(f)
         print(f"[OK] Successfully loaded model via pickle from: {MODEL_PATH}")
     except Exception as pickle_err:
-        print(f"[ERROR] Model load failed: {pickle_err}")
+        model_error = f"joblib: {err}; pickle: {pickle_err}"
+        print(f"[ERROR] Model load failed: {model_error}")
 
 
 # Species metadata dictionary
@@ -89,42 +96,19 @@ SPECIES_INFO = {
 def add_cors_headers(response):
     """Adds standard CORS headers for cross-origin API compatibility."""
     response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
     return response
 
 
-@app.route('/api/health', methods=['GET'])
-@app.route('/health', methods=['GET'])
-def health():
-    """Health check endpoint to verify serverless function status and model loading."""
-    return jsonify({
-        "status": "healthy",
-        "model_loaded": model is not None,
-        "model_path": MODEL_PATH,
-        "classes": [SPECIES_INFO[c]["species"] for c in sorted(SPECIES_INFO.keys())]
-    })
-
-
-@app.route('/api/predict', methods=['POST', 'OPTIONS'])
-@app.route('/predict', methods=['POST', 'OPTIONS'])
-def predict():
-    """
-    Serverless prediction endpoint:
-    Receives JSON with sepal_length, sepal_width, petal_length, petal_width.
-    Returns predicted Iris species and confidence metrics.
-    """
-    if request.method == 'OPTIONS':
-        return ('', 204)
-
-    # Verify model is available
+def do_prediction():
+    """Performs inference with the loaded model."""
     if model is None:
         return jsonify({
             "success": False,
-            "error": "The machine learning model could not be loaded on the server. Please verify iris_model.pkl is deployed."
+            "error": f"The model is not loaded on the server. Details: {model_error or 'File not found'}"
         }), 500
 
-    # Parse incoming payload (supports JSON and Form data)
     payload = request.get_json(silent=True)
     if not payload and request.form:
         payload = request.form
@@ -135,7 +119,6 @@ def predict():
             "error": "Missing input data. Please provide sepal_length, sepal_width, petal_length, and petal_width."
         }), 400
 
-    # Extract & validate the 4 measurements
     try:
         sl = float(str(payload.get('sepal_length', '')).strip())
         sw = float(str(payload.get('sepal_width', '')).strip())
@@ -147,7 +130,6 @@ def predict():
             "error": "All 4 measurements must be valid numeric values."
         }), 400
 
-    # Physical dimension validation
     for val, name in [
         (sl, "Sepal Length"),
         (sw, "Sepal Width"),
@@ -155,20 +137,12 @@ def predict():
         (pw, "Petal Width"),
     ]:
         if val <= 0:
-            return jsonify({
-                "success": False,
-                "error": f"{name} must be greater than 0."
-            }), 400
+            return jsonify({"success": False, "error": f"{name} must be greater than 0."}), 400
         if val > 30:
-            return jsonify({
-                "success": False,
-                "error": f"{name} is unrealistically large (> 30 cm)."
-            }), 400
+            return jsonify({"success": False, "error": f"{name} is unrealistically large (> 30 cm)."}), 400
 
-    # Format 2D array input [1, 4] for scikit-learn
     features = np.array([[sl, sw, pl, pw]], dtype=float)
 
-    # Perform model inference
     try:
         raw_pred = model.predict(features)[0]
         class_id = int(raw_pred)
@@ -178,7 +152,6 @@ def predict():
             "error": f"Prediction inference error: {str(pred_err)}"
         }), 500
 
-    # Retrieve species metadata
     species_data = SPECIES_INFO.get(class_id, {
         "species": f"Class {class_id}",
         "scientific_name": "Unknown species",
@@ -188,7 +161,6 @@ def predict():
         "gradient": "linear-gradient(135deg, #64748b, #475569)"
     })
 
-    # Calculate probabilities if supported by the model
     confidence = None
     probabilities = {}
     if hasattr(model, 'predict_proba'):
@@ -222,14 +194,31 @@ def predict():
     })
 
 
-# Static file serving fallback for local development without Vercel CLI
+# Universal handler accepting all HTTP methods and paths
+# This guarantees Vercel rewrites never fail with 405 Method Not Allowed
 PUBLIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'public')
 
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve_frontend(path):
-    """Serves static frontend files when testing locally."""
+@app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'OPTIONS'])
+@app.route('/<path:path>', methods=['GET', 'POST', 'OPTIONS'])
+def universal_handler(path=''):
+    if request.method == 'OPTIONS':
+        return ('', 204)
+
+    # Any POST request triggers prediction
+    if request.method == 'POST':
+        return do_prediction()
+
+    # Health check endpoints
+    if 'health' in path or request.args.get('health'):
+        return jsonify({
+            "status": "healthy",
+            "model_loaded": model is not None,
+            "model_path": MODEL_PATH,
+            "model_error": model_error
+        })
+
+    # Serve static assets when running in local development mode
     if path and os.path.isfile(os.path.join(PUBLIC_DIR, path)):
         return send_from_directory(PUBLIC_DIR, path)
 
@@ -238,12 +227,13 @@ def serve_frontend(path):
         return send_from_directory(PUBLIC_DIR, 'index.html')
 
     return jsonify({
-        "message": "Iris Flower Classification Serverless API is running.",
+        "status": "ready",
+        "model_loaded": model is not None,
         "endpoints": ["/api/predict", "/api/health"]
     })
 
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print(f"[OK] Local development server running at: http://127.0.0.1:{port}")
-    app.run(host='127.0.0.1', port=port, debug=True)
+    print(f"[OK] Local server running at http://127.0.0.1:{port}")
+    app.run(host='0.0.0.0', port=port, debug=True)

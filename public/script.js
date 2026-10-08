@@ -134,7 +134,13 @@ document.addEventListener('DOMContentLoaded', () => {
         })
       });
 
-      const data = await response.json();
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (_) {
+        showError(`Server responded with status ${response.status}. Please check backend logs.`);
+        return;
+      }
 
       if (!response.ok || !data.success) {
         showError(data.error || 'Prediction request failed. Please check inputs.');
